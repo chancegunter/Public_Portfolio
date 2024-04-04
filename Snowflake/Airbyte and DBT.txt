@@ -1,0 +1,351 @@
+Airbyte Instructions
+
+Open the Docker application
+
+Start Airbyte by opening a terminal and running the following (you may be able to just click the local host link below instead of running the following):
+``` cd airbyte ```
+``` ./run-ab-platform.sh ```
+
+Open up a browser and go to http://localhost:8000. It can take a while for the Airbyte service to start, so don't be surprised if it takes ~10 minutes.
+Username: airbyte
+Password: password
+
+Click `Set up a new source`
+When defining a source, select `Microsoft SQL Server (MSSQL)`
+Select `Scan Changes with User Defined Cursor`
+Click `Set up source`
+Airbyte will run a connection test on the source to make sure it is set up properly
+Create a schema in your group3_project database named `SamsSubsSandwhich` and ensure you have a data warehouse named `lastname_wh`
+
+Once Airbyte has run the connection test successfully, you will pick a destination, select `Pick a destination`.
+Find and click on `Snowflake`
+Click `Set up destination`
+Once the connection test passes, it will pull up the new connection window
+Change schedule type to `Manual`
+Under `Activate the streams you want to sync`, click the button next to each table.
+Click Set up connection
+Click `Sync now`
+Once it's done, go to Snowflake and verify that you see data in the landing database
+
+
+DBT Instructions
+
+- Open VSCode
+- File > Open > Select your project (lastname_DW)
+- On the top bar of the application, select Terminal > New Terminal
+    - This will open a terminal in the directory of your project within VSCode
+- Right click on the models directory and create a new folder inside of it. (Be careful not to create it inside of the example directory.)
+- Call this new folder `samssubssandwhichs`
+
+- Right click on the folder samssubssandwhichs and create a new file. Name this file `_src_samssubssandwhichs.yml`
+- Populate the following code within _src_samssubssandwhichs.yml
+
+```
+version: 2
+
+
+sources:
+  - name: SAMSSUBSSANDWHICH
+    database: GROUP3_PROJECT
+    schema: SAMSSUBSSANDWHICH
+    tables:
+      - name: employee
+      - name: customer
+      - name: product
+      - name: date
+      - name: store
+      - name: ingredient
+      - name: inventory
+      - name: orders
+      - name: order_line
+```
+
+
+- If you need to make any changes to your Snowflake information in your dbt project you can change it by going to your dbt profile.yml file. You may need to change the schema. 
+    - On a mac, this is located under your user directory. You have to click Shift + command + . in order to see hidden folders. The .dbt folder will appear and inside is profiles.yml
+    - On Windows, it's just in the user directory under the .dbt folder and the profiles.yml is inside.
+    - Once you have found the profiles.yml file you can open in a text editor, change the database to GROUP3_PROJECT or your target database
+
+#### dim employee####
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_employee.sql`
+- Populate the following code within ss_dim_employee.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+SELECT
+{{ dbt_utils.generate_surrogate_key(['employee_id', 'employee_first_name', 'employee_last_name']) }} as employee_key,
+employee_pk,
+employee_id,
+employee_first_name,
+employee_last_name,
+employee_birthdate
+FROM {{ source('SAMSSUBSSANDWHICH', 'employee') }}
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_employee
+```
+
+#### dim customer####
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_customer.sql`
+- Populate the following code within ss_dim_customer.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+select
+{{ dbt_utils.generate_surrogate_key(['customer_id', 'customer_first_name', 'customer_last_name']) }} as customer_key,
+customer_pk,
+customer_phone,
+customer_birthdate,
+customer_last_name,
+customer_first_name
+FROM {{ source('SAMSSUBSSANDWHICH', 'customer') }}
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_customer
+```
+
+#### dim date####
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_date.sql`
+- Populate the following code within ss_dim_date.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+with cte_date as (
+{{ dbt_date.get_date_dimension("1990-01-01", "2050-12-31") }}
+)
+
+SELECT
+date_day as date_key,
+date_day,
+day_of_week,
+month_of_year,
+month_name,
+quarter_of_year,
+year_number
+from cte_date
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_date
+```
+
+
+### dim ingredient ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_ingredient.sql`
+- Populate the following code within ss_dim_ingredient.sql
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+) }}
+
+SELECT 
+    CAST(Null as INT) as ingredient_id,
+    CAST(Null as VARCHAR(255)) as ingredient_name,
+    CAST(Null as DECIMAL) as ingredient_height,
+    CAST(Null as DECIMAL) as ingredient_width,
+    CAST(Null as DECIMAL) as ingredient_length,
+    CAST(Null as DECIMAL) as ingredient_weight,
+    CAST(Null as VARCHAR(255)) as supplier_name
+WHERE FALSE
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_ingredient
+```
+
+### dim orderline ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_orderline.sql`
+- Populate the following code within ss_dim_orderline.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+select
+{{ dbt_utils.generate_surrogate_key(['order_line_id','order_number']) }} as order_line_key,
+order_line_qty,
+order_line_id,
+order_number,
+p.product_key,
+order_line_price
+FROM {{ source('SAMSSUBSSANDWHICH', 'order_line') }} ol
+INNER JOIN {{ref('ss_dim_product')}} p on p.product_id = ol.product_id
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_orderline
+```
+
+### dim product ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_product.sql`
+- Populate the following code within ss_dim_product.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+select
+{{ dbt_utils.generate_surrogate_key(['product_id', 'product_name']) }} as product_key,
+product_id,
+product_type,
+product_name,
+product_cost,
+product_calories
+FROM {{ source('SAMSSUBSSANDWHICH', 'product') }}
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_product
+```
+
+
+### dim store ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_store.sql`
+- Populate the following code within ss_dim_store.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+    )
+}}
+
+select
+{{ dbt_utils.generate_surrogate_key(['store_id', 'store_state']) }} as store_key,
+store_id,
+store_pk,
+store_address,
+store_city,
+store_state,
+store_zip
+FROM {{ source('SAMSSUBSSANDWHICH', 'store') }}
+```
+
+- Now run the following
+
+```
+dbt run -m ss_dim_store
+```
+
+### dim inventory ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_inventory.sql`
+- Populate the following code within ss_dim_inventory.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+) }}
+
+SELECT 
+    CAST(Null as INT) as inventory_id,
+    CAST(Null as DATE) as date_key,
+    CAST(Null as INT) as store_key,
+    CAST(Null as INT) as ingredient_id,
+    CAST(Null as INT) as ingredient_qty,
+WHERE FALSE
+```
+
+- Now run the following
+
+```
+dbt run -m ss_fact_inventory
+```
+
+### dim order ###
+
+- Create a new file inside of the samssubssandwhichs directory called `ss_dim_order.sql`
+- Populate the following code within ss_dim_order.sql
+
+```
+{{ config(
+    materialized = 'table',
+    schema = 'dw_samssubsandwhichs'
+) }}
+
+SELECT
+    o.order_number,
+    o.order_method,
+    d.date_key,
+    c.customer_key,
+    s.stores_key,
+    e.employee_key,
+    o.order_total_price,
+    o.order_points_earned
+FROM {{ source('SAMSSUBSSANDWHICH', 'orders') }} o
+INNER JOIN {{ ref('ss_dim_customer') }} c ON o.customer_pk = c.customer_pk 
+INNER JOIN {{ ref('ss_dim_employee') }} e ON o.employee_pk = e.employee_pk 
+INNER JOIN {{ ref('ss_dim_store') }} s ON o.store_pk = s.store_pk 
+INNER JOIN {{ ref('ss_dim_date') }} d ON o.order_date = d.date_key
+```
+
+- Now run the following
+
+```
+dbt run -m ss_fact_order
+```
+ 
+- Now create the _schema_samssubssandwhichs.yml file with the following code
+
+```
+version: 2
+
+models:
+  - name: ss_dim_employee
+    description: "Sams Employees Dimension"
+  - name: ss_dim_customer
+    description: "Sams Customer Dimension"
+  - name: ss_dim_date
+    description: "Sams Date Dimension"
+  - name: ss_dim_store
+    description: "Sams Store Dimension"
+  - name: ss_dim_ingredient
+    description: "Sams Ingredient Dimension"
+  - name: ss_dim_orderline
+    description: "Sams OrderLine Dimension"
+  - name: ss_fact_order
+    description: "Sams Order Fact"
+  - name: ss_fact_inventory
+    description: "Sams Inventory Fact"
+```
