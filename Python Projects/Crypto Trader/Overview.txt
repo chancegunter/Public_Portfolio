@@ -1,0 +1,8 @@
+Crypto Currency Trading
+ 
+This project is trading simulations on 6 crypto currencies of my choice (i.e. bitcoin, bitcoin-cash, ripple, eos, litecoin, ethereum)
+I pulled the price data from a web json api, and save it to csv files.
+The program will run two trading strategies (shorting and simple moving average) on the crypto currency prices.
+The program saves new data into the files.  Meaning, when I go to run the program, it should go get the latest data, update the files, and run new analysis.
+If the program detects a buy signal or sell signal on the last day in the data, print a message like “You should <buy or sell> this stock today”.
+Stores your results to your strategy in a results.json, and specifically identifying which crypto currency and strategy made the most profit.
