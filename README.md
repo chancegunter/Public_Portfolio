@@ -1,18 +1,21 @@
-[File Name]
-## Description
-This file is part of the [Project Name] and it is responsible for [Briefly describe what the file does].
+## 
+#### Description
+This file is part of the Crypto Trading Project and it is responsible for fetching cryptocurrency prices, storing them, and executing trading strategies like mean reversion and simple moving average to determine profitable trading opportunities.
+#### Usage
+To use this file, you need to:
+- Ensure you have the necessary dependencies installed (see below).
+- Run the script in a Python environment.
+- The script will fetch cryptocurrency prices from the Binance TestNet server, execute the trading strategies, and store the results in a JSON file.
 
-## Usage
-To use this file, you need to [describe how to use it].
-
-## Dependencies
+#### Dependencies
 This file depends on the following libraries:
+- numpy
+- json
+- binance
 
-- Library1
-- Library2
+#### Known Issues
+The script does not handle API rate limits which could result in errors when fetching data.
 
-## Known Issues
-[List any known issues or bugs with this file]
-
-## Future Improvements
-[List any planned improvements or features for this file]
+#### Future Improvements
+- Implement error handling for API calls and file operations.
+- Include logging to track the script’s execution and errors.
