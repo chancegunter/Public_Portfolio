@@ -57,3 +57,8 @@
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/chancegunter/Public_Portfolio.git
+
+## Contact
+
+1. **Email**:
+   chancegunter@gmail.com
